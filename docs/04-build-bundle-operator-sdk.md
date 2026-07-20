@@ -93,7 +93,8 @@ Pods inside OpenShift pull from the **service** hostname, not the external route
 CSV=target/bundle/joke-operator/manifests/joke-operator.clusterserviceversion.yaml
 
 # Linux / Git Bash / macOS
-sed -i.bak \
+# Do not write a .bak inside manifests/ — operator-sdk treats extra YAML as a second CSV.
+sed -i \
   's|default-route-openshift-image-registry.apps-crc.testing/|image-registry.openshift-image-registry.svc:5000/|g' \
   "$CSV"
 
