@@ -1,6 +1,8 @@
 # 02a — Trust OpenShift Local certificates
 
-After OpenShift Local is running, routes under `*.apps-crc.testing` (including the web console) use TLS certificates signed by a **cluster-local root CA**. Browsers and tools on your laptop do **not** trust that CA by default, so you see warnings or TLS errors.
+**Estimated time: 5–10 minutes**
+
+After OpenShift Local is running, routes under `*.apps-crc.testing` (including the web console **and the image registry**) use TLS certificates signed by a **cluster-local root CA**. Browsers and tools on your laptop do **not** trust that CA by default, so you see warnings or TLS errors.
 
 This page shows how to export the Ingress root CA and import it into your workstation trust store.
 
@@ -124,8 +126,9 @@ Open https://console-openshift-console.apps-crc.testing — the untrusted-certif
 
 - **Firefox** may use its own certificate store; import the PEM there if the system store is ignored.
 - If you recreate the OpenShift Local cluster (`crc delete` / new start), export and re-import the CA again — the Ingress CA can change.
-- Java clients sometimes need the CA in a JVM truststore (`keytool -importcert`); system trust alone is not always enough for the JDK.
+- Java / Jib clients sometimes need insecure registry mode for the CRC registry route (`-Dquarkus.container-image.insecure=true`) even after trusting the CA — chapter 04 uses that flag.
 - On Windows, `Import-Certificate` into **Trusted Root** shows a Security Warning — click **Yes** to finish.
+- Do **not** commit `crc-root-ca.pem` (it is listed in `.gitignore`).
 
 ## Next
 

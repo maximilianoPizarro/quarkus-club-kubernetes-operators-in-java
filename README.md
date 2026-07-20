@@ -2,7 +2,9 @@
 
 Hands-on tutorial and presentation slides for the Quarkus Club session on building Kubernetes operators with **Quarkus** and the **Java Operator SDK (JOSDK)** / **Quarkus Operator SDK (QOSDK)**.
 
-This repository walks you from installing **Podman Desktop** and **[OpenShift Local](https://developers.redhat.com/products/openshift-local)** through deploying a simple **Joke** operator with **operator-sdk** — a 101 path anyone can reproduce with a free [Red Hat Developer](https://developers.redhat.com/) account.
+This repository walks you from installing **Podman Desktop** and **[OpenShift Local](https://developers.redhat.com/products/openshift-local)** through deploying a simple **Joke** operator — a 101 path anyone can reproduce with a free [Red Hat Developer](https://developers.redhat.com/) account.
+
+Images are built and stored in the **OpenShift Local internal registry** (no Quay account required for the lab).
 
 > **Slides only** — speaker scripts are not included in this repository.
 
@@ -25,12 +27,17 @@ After GitHub Pages is enabled:
 
 Follow these docs in order. The example uses the Quarkiverse **Joke** sample — not a production integration operator.
 
-1. [Prerequisites](./docs/01-prerequisites.md)
-2. [Podman Desktop & OpenShift Local](./docs/02-podman-desktop-openshift-local.md)
-3. [Trust OpenShift Local certificates](./docs/02a-trust-openshift-local-certificates.md) (Windows & Linux)
-4. [Scaffold the Joke operator](./docs/03-scaffold-joke-operator.md)
-5. [Build the OLM bundle with operator-sdk](./docs/04-build-bundle-operator-sdk.md)
-6. [Deploy and verify](./docs/05-deploy-and-verify.md)
+Scaffolded / cloned project trees (`joke-operator/`, `quarkus-operator-sdk/`) are **gitignored** — create them while following the docs; do not commit them back to this repository.
+
+| # | Module | Time |
+|---|--------|------|
+| 1 | [Prerequisites](./docs/01-prerequisites.md) | 15–20 min |
+| 2 | [Podman Desktop & OpenShift Local](./docs/02-podman-desktop-openshift-local.md) | 20–30 min |
+| 2a | [Trust OpenShift Local certificates](./docs/02a-trust-openshift-local-certificates.md) | 5–10 min |
+| 3 | [Scaffold the Joke operator](./docs/03-scaffold-joke-operator.md) | 10–15 min |
+| 4 | [Build against the OpenShift Local registry](./docs/04-build-bundle-operator-sdk.md) | 20–30 min |
+| 5 | [Deploy and verify](./docs/05-deploy-and-verify.md) | 15–20 min |
+| | **Total hands-on** | **~90–120 min** |
 
 ## Concepts in one line
 

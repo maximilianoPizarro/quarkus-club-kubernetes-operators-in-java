@@ -1,12 +1,43 @@
+# Dependencies / IDE
 node_modules/
 .DS_Store
 Thumbs.db
 *.log
-.credentials/
-credentials.json
-GOOGLE_SLIDES_URL.txt
 .idea/
 .vscode/
 *.iml
+
+# Secrets / local credentials
+.credentials/
+credentials.json
+GOOGLE_SLIDES_URL.txt
+crc-kubeconfig.yaml
+**/crc-kubeconfig.yaml
+
+# OpenShift Local / TLS exports (local only)
+crc-root-ca.pem
+*.apps-crc.testing*
+
+# Build outputs
 target/
 .quarkus/
+.m2/
+*.class
+*.jar
+!**/gradle-wrapper.jar
+!**/maven-wrapper.jar
+
+# Cloned / scaffolded workshop code (create these when following docs/)
+quarkus-operator-sdk/
+joke-operator/
+**/joke-operator/
+
+# Container / registry helpers
+.docker/
+Dockerfile.local
+
+# OS / temp
+*.tmp
+*.swp
+*~
+.cache/
