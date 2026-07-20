@@ -27,9 +27,10 @@ Follow these docs in order. The example uses the Quarkiverse **Joke** sample —
 
 1. [Prerequisites](./docs/01-prerequisites.md)
 2. [Podman Desktop & OpenShift Local](./docs/02-podman-desktop-openshift-local.md)
-3. [Scaffold the Joke operator](./docs/03-scaffold-joke-operator.md)
-4. [Build the OLM bundle with operator-sdk](./docs/04-build-bundle-operator-sdk.md)
-5. [Deploy and verify](./docs/05-deploy-and-verify.md)
+3. [Trust OpenShift Local certificates](./docs/02a-trust-openshift-local-certificates.md) (Windows & Linux)
+4. [Scaffold the Joke operator](./docs/03-scaffold-joke-operator.md)
+5. [Build the OLM bundle with operator-sdk](./docs/04-build-bundle-operator-sdk.md)
+6. [Deploy and verify](./docs/05-deploy-and-verify.md)
 
 ## Concepts in one line
 
