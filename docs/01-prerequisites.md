@@ -47,3 +47,5 @@ OpenShift Local is the path this tutorial uses so you get **OperatorHub / OLM** 
 ## Next
 
 → [02 — Podman Desktop & OpenShift Local](./02-podman-desktop-openshift-local.md)
+
+After the cluster is up, trust the Ingress CA: [02a — Trust OpenShift Local certificates](./02a-trust-openshift-local-certificates.md).
