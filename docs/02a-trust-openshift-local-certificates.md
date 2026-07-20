@@ -107,8 +107,15 @@ sudo security add-trusted-cert -d -r trustRoot \
 Restart browsers and any long-running tools (`curl`, IDEs, Postman) so they reload the trust store.
 
 ```bash
-# Should not report certificate verify failures
+# Linux / macOS — should not report certificate verify failures
 curl -vI https://console-openshift-console.apps-crc.testing 2>&1 | grep -iE 'SSL certificate verify|issuer:|subject:'
+```
+
+**Windows (`curl.exe` + Schannel):** after the CA is trusted, revocation checks can still fail for a local CA. Use:
+
+```powershell
+curl.exe --ssl-no-revoke -I https://console-openshift-console.apps-crc.testing
+# Expect: HTTP/1.1 200
 ```
 
 Open https://console-openshift-console.apps-crc.testing — the untrusted-certificate interstitial should be gone (or reduced to a normal login).
@@ -118,6 +125,7 @@ Open https://console-openshift-console.apps-crc.testing — the untrusted-certif
 - **Firefox** may use its own certificate store; import the PEM there if the system store is ignored.
 - If you recreate the OpenShift Local cluster (`crc delete` / new start), export and re-import the CA again — the Ingress CA can change.
 - Java clients sometimes need the CA in a JVM truststore (`keytool -importcert`); system trust alone is not always enough for the JDK.
+- On Windows, `Import-Certificate` into **Trusted Root** shows a Security Warning — click **Yes** to finish.
 
 ## Next
 
