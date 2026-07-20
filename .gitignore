@@ -1,0 +1,12 @@
+node_modules/
+.DS_Store
+Thumbs.db
+*.log
+.credentials/
+credentials.json
+GOOGLE_SLIDES_URL.txt
+.idea/
+.vscode/
+*.iml
+target/
+.quarkus/
