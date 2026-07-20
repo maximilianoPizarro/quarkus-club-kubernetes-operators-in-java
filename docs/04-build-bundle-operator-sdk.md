@@ -176,6 +176,15 @@ If you later publish publicly, swap the registry coordinates for Quay:
   -Dquarkus.operator-sdk.bundle.channels=alpha
 ```
 
+## Bundle image name for chapter 05
+
+```bash
+echo "${REG}/joke-operator-demo/joke-operator-bundle:latest"
+# example: default-route-openshift-image-registry.apps-crc.testing/joke-operator-demo/joke-operator-bundle:latest
+```
+
+Use that exact string with `operator-sdk run bundle` (HTTPS registry route + `--skip-tls-verify`). Do not use `--use-http`.
+
 ## Next
 
 → [05 — Deploy and verify](./05-deploy-and-verify.md)

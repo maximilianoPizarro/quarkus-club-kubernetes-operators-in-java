@@ -16,7 +16,7 @@ Before you start the 101 path, install the tools below. You need a machine that 
 | [Podman Desktop](https://podman-desktop.io/) | Local containers + OpenShift Local extension |
 | [OpenShift Local](https://developers.redhat.com/products/openshift-local) | Single-node OpenShift on your laptop (Console + OLM + **internal image registry**) |
 | `oc` | OpenShift CLI (often installed with OpenShift Local) |
-| [operator-sdk](https://sdk.operatorframework.io/docs/installation/) | Validate OLM bundles (`bundle validate`) |
+| [operator-sdk](https://sdk.operatorframework.io/docs/installation/) | Validate bundles and `run bundle` (Linux binary; on Windows run it inside the CRC VM — see [05](./05-deploy-and-verify.md)) |
 | JDK 17+ (21 recommended) and Maven | Build Quarkus / QOSDK projects |
 | [Quarkus CLI](https://quarkus.io/guides/cli-tooling) | Scaffold the operator project (`quarkus create app`) |
 

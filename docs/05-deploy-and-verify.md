@@ -2,214 +2,169 @@
 
 **Estimated time: 15–20 minutes**
 
-Goal: install the Joke operator on OpenShift Local from the images in the **internal registry**, create a JokeRequest, and confirm reconciliation.
+Goal: install the Joke operator on OpenShift Local with **`operator-sdk run bundle`**, create a JokeRequest, and confirm reconciliation.
 
-Stay in the `joke-operator` project directory from chapters 03–04. Namespace: `joke-operator-demo`.
+Stay in the `joke-operator` project directory from chapters 03–04. Images must already be in the OpenShift Local registry (chapter 04).
 
 ```bash
 oc project joke-operator-demo
+REG=$(oc registry info)   # default-route-openshift-image-registry.apps-crc.testing
+BUNDLE_IMG="${REG}/joke-operator-demo/joke-operator-bundle:latest"
 ```
 
-## 1. Apply CRDs
+## 1. Pull secret for the internal registry
+
+OLM and `operator-sdk` need credentials to pull from the CRC registry:
 
 ```bash
-oc apply -f target/bundle/joke-operator/manifests/jokes.samples.javaoperatorsdk.io-v1.crd.yml
-oc apply -f target/bundle/joke-operator/manifests/jokerequests.samples.javaoperatorsdk.io-v1.crd.yml
-
-oc get crd | grep -i joke
-```
-
-## 2. RBAC + ServiceAccount
-
-```bash
-oc create sa joke-operator -n joke-operator-demo 2>/dev/null || true
-
-cat <<'EOF' | oc apply -f -
-apiVersion: rbac.authorization.k8s.io/v1
-kind: Role
-metadata:
-  name: joke-operator-permissions
-  namespace: joke-operator-demo
-rules:
-- apiGroups: ["samples.javaoperatorsdk.io"]
-  resources: ["jokerequests", "jokerequests/status", "jokerequests/finalizers"]
-  verbs: ["get", "list", "watch", "patch", "update", "create", "delete"]
-- apiGroups: ["samples.javaoperatorsdk.io"]
-  resources: ["jokes"]
-  verbs: ["*"]
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: RoleBinding
-metadata:
-  name: joke-operator-permissions
-  namespace: joke-operator-demo
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: Role
-  name: joke-operator-permissions
-subjects:
-- kind: ServiceAccount
-  name: joke-operator
-  namespace: joke-operator-demo
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  name: joke-operator-crd-reader
-rules:
-- apiGroups: ["apiextensions.k8s.io"]
-  resources: ["customresourcedefinitions"]
-  verbs: ["get", "list"]
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
-metadata:
-  name: joke-operator-crd-reader
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: joke-operator-crd-reader
-subjects:
-- kind: ServiceAccount
-  name: joke-operator
-  namespace: joke-operator-demo
-EOF
-```
-
-## 3. Deploy the operator
-
-```bash
-cat <<'EOF' | oc apply -f -
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: joke-operator
-  namespace: joke-operator-demo
-  labels:
-    app.kubernetes.io/name: joke-operator
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app.kubernetes.io/name: joke-operator
-  template:
-    metadata:
-      labels:
-        app.kubernetes.io/name: joke-operator
-    spec:
-      serviceAccountName: joke-operator
-      containers:
-      - name: joke-operator
-        image: image-registry.openshift-image-registry.svc:5000/joke-operator-demo/joke-operator:1.0.0
-        imagePullPolicy: Always
-        env:
-        - name: KUBERNETES_NAMESPACE
-          valueFrom:
-            fieldRef:
-              fieldPath: metadata.namespace
-        ports:
-        - containerPort: 8080
-          name: http
-        livenessProbe:
-          httpGet:
-            path: /q/health/live
-            port: 8080
-          initialDelaySeconds: 10
-          periodSeconds: 10
-        readinessProbe:
-          httpGet:
-            path: /q/health/ready
-            port: 8080
-          initialDelaySeconds: 5
-          periodSeconds: 10
+TOKEN=$(oc whoami -t)
+AUTH=$(printf 'kubeadmin:%s' "$TOKEN" | base64 | tr -d '\n')
+mkdir -p /tmp
+cat > /tmp/crc-pull-secret.json <<EOF
+{
+  "auths": {
+    "${REG}": { "auth": "${AUTH}" },
+    "image-registry.openshift-image-registry.svc:5000": { "auth": "${AUTH}" }
+  }
+}
 EOF
 
-oc rollout status deployment/joke-operator -n joke-operator-demo --timeout=180s
-oc get pods -n joke-operator-demo -l app.kubernetes.io/name=joke-operator
-oc logs -n joke-operator-demo deploy/joke-operator --tail=40
+oc create secret generic crc-pull-secret \
+  --from-file=.dockerconfigjson=/tmp/crc-pull-secret.json \
+  --type=kubernetes.io/dockerconfigjson \
+  -n joke-operator-demo \
+  --dry-run=client -o yaml | oc apply -f -
+
+oc secrets link default crc-pull-secret --for=pull -n joke-operator-demo
 ```
 
-You should see the reconciler registered for namespace `joke-operator-demo`.
+## 2. Install with `operator-sdk run bundle`
 
-### Optional — `operator-sdk run bundle`
-
-If you have a working local container runtime that can pull from the CRC registry route, you can install via OLM instead:
+### Linux / macOS (local Podman or Docker)
 
 ```bash
-operator-sdk run bundle \
-  default-route-openshift-image-registry.apps-crc.testing/joke-operator-demo/joke-operator-bundle:latest \
+echo "$TOKEN" | podman login -u kubeadmin --password-stdin --tls-verify=false "$REG"
+
+operator-sdk run bundle "$BUNDLE_IMG" \
   --namespace joke-operator-demo \
   --timeout 10m \
-  --skip-tls \
-  --use-http
+  --security-context-config=restricted \
+  --skip-tls-verify \
+  --pull-secret-name=crc-pull-secret
 ```
 
-Then check:
+> Do **not** pass `--use-http` or `--skip-tls` against the CRC registry route — those force plain HTTP and fail with `400 Bad Request`. Use `--skip-tls-verify` only.
+
+### Windows (recommended: run operator-sdk inside the CRC VM)
+
+Windows Podman Machine often needs Hyper-V admin rights. OpenShift Local already exposes Podman over SSH on port `2222`. Copy a Linux `operator-sdk` (and kubeconfig) into the CRC VM once, then run the bundle from there.
+
+```bash
+# One-time setup (from Git Bash / PowerShell)
+CRC_SSH_KEY="$HOME/.crc/machines/crc/id_ed25519"
+# Download Linux binary if needed:
+# curl -fL -o operator-sdk-linux \
+#   https://github.com/operator-framework/operator-sdk/releases/download/v1.42.3/operator-sdk_linux_amd64
+
+scp -P 2222 -i "$CRC_SSH_KEY" operator-sdk-linux core@127.0.0.1:~/operator-sdk
+oc config view --raw --minify > /tmp/crc-kubeconfig.yaml
+scp -P 2222 -i "$CRC_SSH_KEY" /tmp/crc-kubeconfig.yaml core@127.0.0.1:~/kubeconfig
+scp -P 2222 -i "$CRC_SSH_KEY" /tmp/crc-pull-secret.json core@127.0.0.1:~/pull-secret.json
+```
+
+```bash
+ssh -i "$CRC_SSH_KEY" -p 2222 -o StrictHostKeyChecking=no core@127.0.0.1
+```
+
+Inside the CRC VM:
+
+```bash
+chmod +x ~/operator-sdk
+export KUBECONFIG=$HOME/kubeconfig
+TOKEN=$(~/kubectl create token -n joke-operator-demo --duration=1h 2>/dev/null || true)
+# Or paste the same TOKEN from `oc whoami -t` on the host:
+# TOKEN=<from host>
+
+REG=default-route-openshift-image-registry.apps-crc.testing
+BUNDLE_IMG=${REG}/joke-operator-demo/joke-operator-bundle:latest
+
+echo "$TOKEN" | podman login -u kubeadmin --password-stdin --tls-verify=false "$REG"
+
+~/operator-sdk run bundle "$BUNDLE_IMG" \
+  --namespace joke-operator-demo \
+  --timeout 10m \
+  --security-context-config=restricted \
+  --skip-tls-verify \
+  --pull-secret-name=crc-pull-secret
+```
+
+Success looks like:
+
+```text
+OLM has successfully installed "joke-operator.v1.0.0-snapshot"
+```
+
+## 3. Verify OLM install
 
 ```bash
 oc get csv -n joke-operator-demo
 oc get pods -n joke-operator-demo
+oc get catalogsource,subscription,operatorgroup -n joke-operator-demo
+oc get crd | grep -i joke
 ```
 
-The Deployment path above is the default for this tutorial because it works reliably with only `oc` + the OpenShift Local registry (including on Windows when Podman/Hyper-V needs admin).
+Expect CSV phase **Succeeded** and a Running `joke-operator-…` pod.
 
 ## 4. Create a JokeRequest
 
 ```bash
 oc apply -n joke-operator-demo -f src/main/k8s/jokerequest.yml
-```
 
-Watch the request and resulting jokes:
-
-```bash
 oc get jokerequests -n joke-operator-demo
 oc describe jokerequest -n joke-operator-demo
 oc get jokes -n joke-operator-demo
-
-# Once a Joke exists (name is often the joke id from the API):
 oc get jokes <joke-id> -n joke-operator-demo -o jsonpath="{.joke}{'\n'}"
 ```
 
 When reconcile succeeds:
 
 - `JokeRequest` status shows `State: CREATED`
-- a **Joke** resource holds the text fetched from the public Joke API
+- a **Joke** resource holds the text from the public Joke API
 
 ## 5. Cleanup (before re-running the lab)
 
-Remove the demo so the next person (or you) can follow the instructivo from a clean cluster:
+From the machine where you ran `run bundle` (host or CRC VM):
 
 ```bash
-# CRs
-oc delete jokerequest --all -n joke-operator-demo --ignore-not-found
-oc delete joke --all -n joke-operator-demo --ignore-not-found
-
-# Workloads / OLM leftovers
-oc delete deployment joke-operator -n joke-operator-demo --ignore-not-found
-oc delete csv -n joke-operator-demo --all --ignore-not-found
-# If you used operator-sdk run bundle:
-# operator-sdk cleanup joke-operator --namespace joke-operator-demo
-
-# Project (also deletes ImageStreams / Builds in that namespace)
-oc delete project joke-operator-demo
-
-# Cluster-scoped leftovers
-oc delete crd jokes.samples.javaoperatorsdk.io jokerequests.samples.javaoperatorsdk.io --ignore-not-found
-oc delete clusterrole joke-operator-crd-reader --ignore-not-found
-oc delete clusterrolebinding joke-operator-crd-reader --ignore-not-found
+operator-sdk cleanup joke-operator --namespace joke-operator-demo
+# CRC VM example:
+# ~/operator-sdk cleanup joke-operator --namespace joke-operator-demo
 ```
 
-Optionally delete your local scaffold (it is gitignored):
+Then remove namespace leftovers and CRDs:
+
+```bash
+oc delete project joke-operator-demo
+oc delete crd jokes.samples.javaoperatorsdk.io jokerequests.samples.javaoperatorsdk.io --ignore-not-found
+```
+
+Optionally delete your local scaffold (gitignored):
 
 ```bash
 rm -rf ~/joke-operator /tmp/quarkus-operator-sdk
-# Windows Git Bash example:
-# rm -rf /c/Users/$USER/joke-operator
 ```
+
+## Fallback — Deployment without OLM
+
+If you cannot run `operator-sdk` (no Podman / CRC SSH), you can still exercise reconcile with a plain Deployment. See the previous lab notes or apply CRDs + RBAC + Deployment pointing at:
+
+`image-registry.openshift-image-registry.svc:5000/joke-operator-demo/joke-operator:1.0.0`
+
+Prefer `run bundle` for the OperatorHub / OLM experience.
 
 ## You completed the 101 path
 
-You installed OpenShift Local, pushed images to the **internal registry**, deployed a QOSDK operator, and exercised a reconcile loop with a simple CR.
+You installed OpenShift Local, pushed images to the **internal registry**, installed the operator with **operator-sdk run bundle**, and exercised a reconcile loop with a simple CR.
 
 ### Timing overview
 
