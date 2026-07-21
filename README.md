@@ -6,6 +6,8 @@ This repository walks you from installing **Podman Desktop** and **[OpenShift Lo
 
 Images are built and stored in the **OpenShift Local internal registry** (no Quay account required for the lab).
 
+The ready-to-run operator lives in [`joke-operator/`](./joke-operator/) (based on the Quarkiverse Joke sample, with workshop fixes already applied).
+
 > **Slides only** — speaker scripts are not included in this repository.
 
 ## Live slides (talk day)
@@ -23,21 +25,32 @@ After GitHub Pages is enabled:
 2. **Source**: GitHub Actions
 3. Push to `main` (or re-run the **Deploy GitHub Pages** workflow)
 
-## Tutorial (101 path)
+## Mandatory path (do these in order)
 
-Follow these docs in order. The example uses the Quarkiverse **Joke** sample — not a production integration operator.
+Do **not** skip steps marked mandatory. Optional steps are labeled as such in each doc.
 
-Scaffolded / cloned project trees (`joke-operator/`, `quarkus-operator-sdk/`) are **gitignored** — create them while following the docs; do not commit them back to this repository.
+| Order | Module | Mandatory? | What you must finish before continuing |
+|------:|--------|:----------:|----------------------------------------|
+| 1 | [Prerequisites](./docs/01-prerequisites.md) | **Yes** | JDK 21, Maven/Quarkus CLI, `oc`, `operator-sdk`, Podman Desktop installed |
+| 2 | [Podman Desktop & OpenShift Local](./docs/02-podman-desktop-openshift-local.md) | **Yes** | `crc start` done; `oc login` as kubeadmin works |
+| 2a | [Trust OpenShift Local certificates](./docs/02a-trust-openshift-local-certificates.md) | **Yes** (once per machine) | Browser/CLI trust the CRC Ingress CA |
+| 3 | [Joke operator project](./docs/03-scaffold-joke-operator.md) | **Yes** | Use the committed `joke-operator/` tree (no clone required) |
+| 4 | [Build against the OpenShift Local registry](./docs/04-build-bundle-operator-sdk.md) | **Yes** | Operator image **and** bundle image both present in the registry |
+| 5 | [Deploy and verify](./docs/05-deploy-and-verify.md) | **Yes** | CSV `Succeeded`, pod Running, JokeRequest reconciles |
 
-| # | Module | Time |
-|---|--------|------|
-| 1 | [Prerequisites](./docs/01-prerequisites.md) | 15–20 min |
-| 2 | [Podman Desktop & OpenShift Local](./docs/02-podman-desktop-openshift-local.md) | 20–30 min |
-| 2a | [Trust OpenShift Local certificates](./docs/02a-trust-openshift-local-certificates.md) | 5–10 min |
-| 3 | [Scaffold the Joke operator](./docs/03-scaffold-joke-operator.md) | 10–15 min |
-| 4 | [Build against the OpenShift Local registry](./docs/04-build-bundle-operator-sdk.md) | 20–30 min |
-| 5 | [Deploy and verify](./docs/05-deploy-and-verify.md) | 15–20 min |
-| | **Total hands-on** | **~90–120 min** |
+**Total hands-on:** ~90–120 min.
+
+### Quick restart (cluster already set up)
+
+If OpenShift Local is already running and trusted, start here:
+
+```bash
+git clone https://github.com/maximilianoPizarro/quarkus-club-kubernetes-operators-in-java.git
+cd quarkus-club-kubernetes-operators-in-java/joke-operator
+# then follow docs/04 then docs/05 (mandatory steps only)
+```
+
+To wipe a previous lab install before retrying, use the cleanup section at the end of [05](./docs/05-deploy-and-verify.md).
 
 ## Concepts in one line
 
@@ -56,7 +69,7 @@ When you finish the Joke 101 path, explore a richer community operator:
 
 - [OpenShift Local](https://developers.redhat.com/products/openshift-local)
 - [QOSDK documentation](https://docs.quarkiverse.io/quarkus-operator-sdk/dev/)
-- [Joke sample](https://github.com/quarkiverse/quarkus-operator-sdk/tree/main/samples/joke)
+- [Joke sample (upstream)](https://github.com/quarkiverse/quarkus-operator-sdk/tree/main/samples/joke)
 - [Quarkus Club](https://www.youtube.com/live/WwMOUMQyq4s)
 - [Author on LinkedIn](https://www.linkedin.com/in/maximiliano-gregorio-pizarro-consultor-it/)
 - [Author on GitHub](https://github.com/maximilianoPizarro)

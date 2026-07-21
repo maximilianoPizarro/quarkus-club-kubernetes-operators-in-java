@@ -71,4 +71,4 @@ If you skip OpenShift Local and use **kind**:
 
 → [02a — Trust OpenShift Local certificates](./02a-trust-openshift-local-certificates.md) (recommended after install)
 
-→ [03 — Scaffold the Joke operator](./03-scaffold-joke-operator.md)
+→ [03 — Joke operator project](./03-scaffold-joke-operator.md)

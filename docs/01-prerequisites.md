@@ -18,9 +18,9 @@ Before you start the 101 path, install the tools below. You need a machine that 
 | `oc` | OpenShift CLI (often installed with OpenShift Local) |
 | [operator-sdk](https://sdk.operatorframework.io/docs/installation/) | Validate bundles and `run bundle` (Linux binary; on Windows run it inside the CRC VM — see [05](./05-deploy-and-verify.md)) |
 | JDK 17+ (21 recommended) and Maven | Build Quarkus / QOSDK projects |
-| [Quarkus CLI](https://quarkus.io/guides/cli-tooling) | Scaffold the operator project (`quarkus create app`) |
+| [Quarkus CLI](https://quarkus.io/guides/cli-tooling) | Optional — only if you scaffold from zero (appendix in doc 03). The 101 path uses the committed `joke-operator/` tree. |
 
-This tutorial uses the **OpenShift Local internal registry** (no Quay / Docker Hub account required for the 101 path).
+This tutorial uses the **OpenShift Local internal registry** (no Quay / Docker Hub account required for the 101 path). The Joke operator sources ship in this repo under `joke-operator/`.
 
 ## Platform notes
 

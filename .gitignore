@@ -27,10 +27,12 @@ target/
 !**/gradle-wrapper.jar
 !**/maven-wrapper.jar
 
-# Cloned / scaffolded workshop code (create these when following docs/)
+# Optional from-scratch clone (not needed — joke-operator/ is committed)
 quarkus-operator-sdk/
-joke-operator/
-**/joke-operator/
+
+# joke-operator build / operator-sdk run-bundle leftovers
+joke-operator/target/
+joke-operator/bundle-*/
 
 # Container / registry helpers
 .docker/

@@ -132,4 +132,4 @@ Open https://console-openshift-console.apps-crc.testing — the untrusted-certif
 
 ## Next
 
-→ [03 — Scaffold the Joke operator](./03-scaffold-joke-operator.md)
+→ [03 — Joke operator project](./03-scaffold-joke-operator.md)

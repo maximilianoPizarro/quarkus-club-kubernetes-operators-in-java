@@ -2,40 +2,42 @@
 
 **Estimated time: 20–30 minutes**
 
-Goal: build the Joke **operator image** and OLM **bundle** using the **OpenShift Local internal registry** (no Quay account).
+Goal: build the Joke **operator image** and OLM **bundle image** in the **OpenShift Local internal registry** (no Quay account).
 
 QOSDK docs: [Deploy with OLM](https://docs.quarkiverse.io/quarkus-operator-sdk/dev/deploy-with-olm.html).
 
-## Ensure the bundle-generator extension is present
+Work from the committed project:
 
-In `pom.xml` (or when scaffolding), include:
-
-```text
-quarkus-operator-sdk-bundle-generator
+```bash
+cd joke-operator   # repo root → joke-operator/
 ```
 
-Also keep `quarkus-container-image-jib` so Maven can build/push without a local Docker daemon.
+## Mandatory steps (do in order)
 
-## 1. Create the project and log in to the registry
+You need **both** images before chapter 05:
+
+1. Operator image → `…/joke-operator-demo/joke-operator:1.0.0`
+2. Bundle image → `…/joke-operator-demo/joke-operator-bundle:latest`
+
+Skipping **M4.5** is the most common failure (`bundle:latest: not found` on `run bundle`).
+
+### M4.1 — Create the OpenShift project
 
 ```bash
 oc new-project joke-operator-demo
-# or: oc project joke-operator-demo
+# if it already exists:
+# oc project joke-operator-demo
 
 REG=$(oc registry info)          # e.g. default-route-openshift-image-registry.apps-crc.testing
 TOKEN=$(oc whoami -t)
 echo "Registry: $REG"
 ```
 
-Grant push rights (kubeadmin usually already can; safe to re-run):
+### M4.2 — Registry credentials for Jib
 
 ```bash
 oc policy add-role-to-user registry-editor "$(oc whoami)" -n joke-operator-demo
-```
 
-Configure credentials for Jib (writes `~/.docker/config.json`):
-
-```bash
 mkdir -p "$HOME/.docker"
 AUTH=$(printf 'kubeadmin:%s' "$TOKEN" | base64 | tr -d '\n')
 cat > "$HOME/.docker/config.json" <<EOF
@@ -51,9 +53,7 @@ EOF
 
 > On Windows PowerShell, create the same JSON under `%USERPROFILE%\.docker\config.json` with `auth` = Base64 of `kubeadmin:<token>`.
 
-## 2. Build the operator image and generate the bundle
-
-From the `joke-operator` project directory:
+### M4.3 — Build and push the operator image + generate the bundle
 
 ```bash
 ./mvnw clean package \
@@ -70,29 +70,22 @@ From the `joke-operator` project directory:
   -Dquarkus.operator-sdk.crd.apply=false
 ```
 
-Typical outputs:
+Expected:
 
-- Operator image pushed to  
-  `default-route-openshift-image-registry.apps-crc.testing/joke-operator-demo/joke-operator:1.0.0`
-- Bundle metadata under `target/bundle/joke-operator/`
-  - `manifests/`
-  - `bundle.Dockerfile`
-  - `metadata/`
-
-Verify the ImageStream:
+- ImageStream `joke-operator` tag `1.0.0`
+- Bundle files under `target/bundle/joke-operator/` (`manifests/`, `bundle.Dockerfile`, `metadata/`)
 
 ```bash
 oc get is -n joke-operator-demo
 ```
 
-## 3. Point the CSV at the in-cluster registry URL
+### M4.4 — Point the CSV at the in-cluster registry URL
 
-Pods inside OpenShift pull from the **service** hostname, not the external route. Patch the generated CSV before building the bundle image:
+Pods pull from the **service** hostname, not the external route:
 
 ```bash
 CSV=target/bundle/joke-operator/manifests/joke-operator.clusterserviceversion.yaml
 
-# Linux / Git Bash / macOS
 # Do not write a .bak inside manifests/ — operator-sdk treats extra YAML as a second CSV.
 sed -i \
   's|default-route-openshift-image-registry.apps-crc.testing/|image-registry.openshift-image-registry.svc:5000/|g' \
@@ -101,34 +94,21 @@ sed -i \
 grep 'image:' "$CSV"
 ```
 
-You should see:
+You must see:
 
 ```text
 image: image-registry.openshift-image-registry.svc:5000/joke-operator-demo/joke-operator:1.0.0
 ```
 
-### Install modes (OwnNamespace)
-
-The reconciler watches the current namespace. If the CSV only enables `AllNamespaces`, OLM will fail with `UnsupportedOperatorGroup` when you use a namespaced OperatorGroup. Ensure `installModes` includes `OwnNamespace` / `SingleNamespace` as supported (edit the CSV if needed).
-
-## 4. Validate with operator-sdk
+Validate:
 
 ```bash
 operator-sdk bundle validate target/bundle/joke-operator
 ```
 
-Fix reported errors before continuing. Optional OperatorHub checks:
+Warnings about `annotations` / `minKubeVersion` are OK. **Errors** must be fixed before continuing.
 
-```bash
-operator-sdk bundle validate target/bundle/joke-operator \
-  --select-optional name=operatorhub
-```
-
-> If validation complains that the `Joke` CRD is in the bundle but not listed as **owned**, move that CRD from `required` to `owned` in the CSV (the sample treats Joke as a secondary CR created by the reconciler).
-
-## 5. Build the bundle image (in-cluster — recommended)
-
-No local Podman/Docker required. Use an OpenShift binary Docker build:
+### M4.5 — Build the bundle image (in-cluster)
 
 ```bash
 BUNDLE_DIR=target/bundle/joke-operator
@@ -136,7 +116,7 @@ cp "$BUNDLE_DIR/bundle.Dockerfile" "$BUNDLE_DIR/Dockerfile"
 
 oc new-build --name=joke-operator-bundle --binary --strategy=docker \
   -n joke-operator-demo
-# If the BuildConfig already exists, skip new-build and only start-build:
+# If the BuildConfig already exists, skip new-build and only run start-build:
 
 oc start-build joke-operator-bundle \
   --from-dir="$BUNDLE_DIR" \
@@ -144,28 +124,32 @@ oc start-build joke-operator-bundle \
   -n joke-operator-demo
 ```
 
-Resulting image (in-cluster):
+Confirm **both** ImageStreams:
 
-```text
-image-registry.openshift-image-registry.svc:5000/joke-operator-demo/joke-operator-bundle:latest
+```bash
+oc get is -n joke-operator-demo
+# joke-operator          …   1.0.0
+# joke-operator-bundle   …   latest
 ```
 
-### Alternative — local Podman
+Bundle image name for chapter 05:
 
-If Podman works on your machine:
+```bash
+echo "${REG}/joke-operator-demo/joke-operator-bundle:latest"
+```
+
+## Optional — Build the bundle with local Podman
 
 ```bash
 podman build -f target/bundle/joke-operator/bundle.Dockerfile \
-  -t "$REG/joke-operator-demo/joke-operator-bundle:1.0.0" \
+  -t "$REG/joke-operator-demo/joke-operator-bundle:latest" \
   target/bundle/joke-operator
 
 podman push --tls-verify=false \
-  "$REG/joke-operator-demo/joke-operator-bundle:1.0.0"
+  "$REG/joke-operator-demo/joke-operator-bundle:latest"
 ```
 
 ## Optional — Quay (not required for this tutorial)
-
-If you later publish publicly, swap the registry coordinates for Quay:
 
 ```bash
 ./mvnw clean package \
@@ -175,15 +159,6 @@ If you later publish publicly, swap the registry coordinates for Quay:
   -Dquarkus.container-image.group=YOUR_USER \
   -Dquarkus.operator-sdk.bundle.channels=alpha
 ```
-
-## Bundle image name for chapter 05
-
-```bash
-echo "${REG}/joke-operator-demo/joke-operator-bundle:latest"
-# example: default-route-openshift-image-registry.apps-crc.testing/joke-operator-demo/joke-operator-bundle:latest
-```
-
-Use that exact string with `operator-sdk run bundle` (HTTPS registry route + `--skip-tls-verify`). Do not use `--use-http`.
 
 ## Next
 
